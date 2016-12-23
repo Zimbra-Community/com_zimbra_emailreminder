@@ -1,15 +1,21 @@
 /*
  * ***** BEGIN LICENSE BLOCK *****
  * Zimbra Collaboration Suite Zimlets
- * Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Zimbra, Inc.
+ * Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
  * 
- * The contents of this file are subject to the Zimbra Public License
- * Version 1.3 ("License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
- * http://www.zimbra.com/license.
+ * The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License");
+ * you may not use this file except in compliance with the License. 
+ * You may obtain a copy of the License at: http://www.zimbra.com/license
+ * The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 
+ * have been added to cover use of software over a computer network and provide for limited attribution 
+ * for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B. 
  * 
- * Software distributed under the License is distributed on an "AS IS"
- * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+ * Software distributed under the License is distributed on an "AS IS" basis, 
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing rights and limitations under the License. 
+ * The Original Code is Zimbra Open Source Web Client. 
+ * The Initial Developer of the Original Code is Zimbra, Inc. 
+ * All portions of the code are Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc. All Rights Reserved. 
  * ***** END LICENSE BLOCK *****
  */
 
@@ -81,7 +87,7 @@ function() {
 	var folderNode = soapDoc.set("folder");
 	folderNode.setAttribute("l", appCtxt.getFolderTree().root.id);
 	var command = new ZmCsfeCommand();
-	var top = command.invoke({soapDoc: soapDoc}).Body.GetFolderResponse.folder[0];
+	var top = command.invoke({soapDoc: soapDoc, noAuthToken: true}).Body.GetFolderResponse.folder[0];
 
 	var folders = top.folder;
 	if (folders) {
@@ -110,7 +116,7 @@ function() {
 	folderNode.setAttribute("l", appCtxt.getFolderTree().root.id);
 	folderNode.setAttribute("view", EmailReminderZimlet.VIEW_CALENDAR);
 	var command = new ZmCsfeCommand();
-	var resp = command.invoke({soapDoc: soapDoc});
+	var resp = command.invoke({soapDoc: soapDoc, noAuthToken: true});
 	var id = resp.Body.CreateFolderResponse.folder[0].id;
 	if (!id) {
 		var errMsg = AjxMessageFormat.format(this.getMessage("EmailReminder_error_createcalendar"), EmailReminderZimlet.CALENDAR_EMAIL_REMINDERS);
@@ -124,7 +130,7 @@ function() {
 	actionNode.setAttribute("id", id);
 	actionNode.setAttribute("color", "5");
 	command = new ZmCsfeCommand();
-	resp = command.invoke({soapDoc: soapDoc});
+	resp = command.invoke({soapDoc: soapDoc, noAuthToken: true});
 	this._justCreatedCalendarFolder = true;
 };
 
@@ -293,7 +299,8 @@ function(subject) {
  */
 EmailReminderZimlet.prototype.initializeToolbar =
 function(app, toolbar, controller, viewId) {
-	if(viewId.indexOf("COMPOSE") >=0 && this.ereminder_showInCompose)
+	var viewType = appCtxt.getViewTypeFromId(viewId);
+	if(viewType == ZmId.VIEW_COMPOSE && this.ereminder_showInCompose)
 		this._addReminderBtnToCompose(toolbar, controller);
 };
 
@@ -350,7 +357,7 @@ function() {
 	var i = 0;
 	html[i++] = "<DIV>";
 	html[i++] = "<TABLE width=100%>";
-	html[i++] = ["<TR><TD width=2%><img src='" , this.getResource("emailReminder.gif") , "'/></TD><TD>",hdrMsg,"</TD><TR>"].join("");
+	html[i++] = ["<TR><TD width=2%><img src='" , this.getResource("emailreminder-icon.png") , "'/></TD><TD>",hdrMsg,"</TD><TR>"].join("");
 	html[i++] = "</TABLE>";
 	html[i++] = "<TABLE>";
 	html[i++] = "<TR><TD id='emailReminder_absMenuTD'></TD><TD><input type='text' id='emailReminder_datefield' SIZE=9></input></TD><TD width='10px' id='emailReminder_calendarMenu'></TD><TD>(<span id='emailReminder_dateFriendlyName'></span>)</TD></TR>";
