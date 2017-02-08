@@ -24,6 +24,7 @@
  * 
  */
 function com_zimbra_emailreminder_HandlerObject() {
+   
 }
 
 com_zimbra_emailreminder_HandlerObject.prototype = new ZmZimletBase();
@@ -65,7 +66,7 @@ EmailReminderZimlet.USER_PROP_SHOW_IN_COMPOSE = "ereminder_showInCompose";
  * 
  */
 EmailReminderZimlet.prototype.init =
-function() {
+function() { 
 	this.emailReminderZimletON = this.getUserProperty(EmailReminderZimlet.USER_PROP_TURN_ON) == "true";
 	if (!this.emailReminderZimletON) {
 		return;
@@ -74,7 +75,34 @@ function() {
 	this._allowDrag = this.getUserProperty(EmailReminderZimlet.USER_PROP_ALLOW_DRAG) == "true";
 	this.ereminder_showInCompose = this.getUserProperty(EmailReminderZimlet.USER_PROP_SHOW_IN_COMPOSE) == "true";
 	this._notesPrefix = this.getMessage("EmailReminder_dialog_reminder_notes_label");
+
+      var soapDoc = AjxSoapDoc.create("GetPrefsRequest", "urn:zimbraAccount");
+
+      appCtxt.getAppController().sendRequest({
+         soapDoc: soapDoc,
+         asyncMode: true,
+         callback: new AjxCallback(void 0, this._setReminderEmail)
+      });
 };
+
+EmailReminderZimlet.prototype._setReminderEmail = function(response) {
+   //If the user has not set amd email for Notifications By Email, set one (default Zimbra leaves this empty)
+   //if another address is already set, leave that there
+  if(!response._data.GetPrefsResponse._attrs.zimbraPrefCalendarReminderEmail)
+   {    
+      console.log("EmailReminderZimlet setting default address for Notifications By Email");
+      var soapDoc = AjxSoapDoc.create("ModifyPrefsRequest", "urn:zimbraAccount"),
+      node;
+
+      node = soapDoc.set("pref", appCtxt.getActiveAccount().name);
+      node.setAttribute("name", "zimbraPrefCalendarReminderEmail");
+
+      appCtxt.getAppController().sendRequest({
+         soapDoc: soapDoc,
+         asyncMode: true
+      }); 
+   }
+}
 
 /**
  * Gets the follow-up folder ID.
@@ -139,7 +167,7 @@ function() {
  * 
  */
 EmailReminderZimlet.prototype._createReminderDialog =
-function() {
+function(msg) {
 	//if zimlet dialog already exists...
 	if (this._erDialog) {
 		this._getAbsHoursMenu();//reset the timemenu
@@ -162,7 +190,9 @@ function() {
 			parent	: this.getShell()
 		};
 	this._erDialog = new ZmDialog(dialog_args);
-	this._erDialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._okBtnListener));
+   this._erDialog._button[1].setText(this.getMessage("EmailReminder_dialog_CancelBtn"));
+	this._erDialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._okBtnListener, [msg]));
+   
 };
 
 /**
@@ -171,7 +201,11 @@ function() {
  * @see		_createReminderDialog
  */
 EmailReminderZimlet.prototype._okBtnListener =
-function() {
+function(msg) {
+   var repeat = document.getElementById('EmailReminderZimletRepeat').value;
+   var emailNotify = document.getElementById('EmailReminderZimletEmailNotify').checked;
+   var sendInvites = document.getElementById('EmailReminderZimletsendInvites').checked;
+   
 	var startDate = new Date();
 	var endDate = "";
 	var hoursVal = document.getElementById("emailReminder_absMenu").value;
@@ -189,7 +223,7 @@ function() {
 	else
 		subject = this._subject;
 
-	this._createAppt(startDate, endDate, subject);
+	this._createAppt(startDate, endDate, subject, repeat, emailNotify, sendInvites, msg);
 	this._erDialog.popdown();
 };
 
@@ -201,7 +235,7 @@ function() {
  * @param	{string}	subject			the subject
  */
 EmailReminderZimlet.prototype._createAppt =
-function(startDate, endDate, subject) {
+function(startDate, endDate, subject, repeat, emailNotify, sendInvites, msg) {
 	var reminderMinutes = appCtxt.getSettings().getSetting("CAL_REMINDER_WARNING_TIME").value;
 	try {
 		var appt = new ZmAppt();
@@ -213,8 +247,32 @@ function(startDate, endDate, subject) {
 		appt.freeBusy = "F";
 		appt.privacy = "PRI";
 		appt.transparency = "O";
+      appt.setRecurType(repeat);
+
+      msg._addrs.TO._array.forEach(function(address)
+      {
+         appt.setAttendees(address.address, ZmCalBaseItem.PERSON);
+      });
+
+      msg._addrs.CC._array.forEach(function(address)
+      {
+         appt.setAttendees(address.address, ZmCalBaseItem.PERSON);
+      });
+      
+      if(emailNotify)
+      {
+         appt.addReminderAction("EMAIL");
+      }   
 		appt.setFolderId(this.emailFollowupFolderId);
-		appt.save();
+      
+      if(sendInvites)
+      {
+		   appt.send();
+      }
+      else
+      {
+         appt.save();
+      }   
 	} catch(e) {
 		return;
 	}
@@ -271,7 +329,7 @@ function(force) {
  * @param	{string}	subject
  */
 EmailReminderZimlet.prototype._setSubjectAndShowDlg =
-function(subject) {
+function(subject, msg) {
 	if (this._apptComposeController == undefined) {//load calendar package when we are creating appt for the first time(since login)
 		this._getEmailFollowupFolderId();
 		this._apptComposeController = AjxDispatcher.run("GetApptComposeController");
@@ -285,7 +343,7 @@ function(subject) {
 	if (subject.length > 50)
 		subject = subject.substring(0, 50) + "...";
 
-	this._createReminderDialog();
+	this._createReminderDialog(msg);
 	document.getElementById("emailReminder_subjectField").innerHTML = subject;
 	this._erDialog.popup();
 };
@@ -340,7 +398,7 @@ function() {
 	var msg = this._composerCtrl._composeView.getMsg();
 	if (msg) {
 		this._composerCtrl._send();
-		this._setSubjectAndShowDlg(this._composerCtrl._composeView._subjectField.value);
+		this._setSubjectAndShowDlg(this._composerCtrl._composeView._subjectField.value, msg);
 	}
 };
 
@@ -363,10 +421,15 @@ function() {
 	html[i++] = "<TR><TD id='emailReminder_absMenuTD'></TD><TD><input type='text' id='emailReminder_datefield' SIZE=9></input></TD><TD width='10px' id='emailReminder_calendarMenu'></TD><TD>(<span id='emailReminder_dateFriendlyName'></span>)</TD></TR>";
 	html[i++] = "</TABLE>";
 	html[i++] = "</DIV>";
-	html[i++] = "<DIV>";
+	html[i++] = "<DIV><table><tr><td>";
 	html[i++] = this._notesPrefix;
-	html[i++] = "<input id='emailReminder_notesField' type=text style=\"width:400px;\"></input>";
+	html[i++] = "</td><td><input id='emailReminder_notesField' type=text style=\"width:400px;\"></input></td></tr>";
+   html[i++] = "<tr><td>"+ZmMsg.repeatLabel+" " + "</td><td><select id='EmailReminderZimletRepeat'><option value='NON'>"+ZmMsg.none+"</option><option value='DAI'>"+ZmMsg.daily+"</option><option value='WEE'>"+ZmMsg.weekly+"</option><option value='MON'>"+ZmMsg.monthly+"</option><option value='YEA'>"+ZmMsg.yearly+"</option></select></td></tr>"; // values are in ZmApptViewHelper.REPEAT_OPTIONS
+   html[i++] = "<tr><td>"+ZmMsg.emailNotificationsLabel+"</td><td><input type='checkbox' id='EmailReminderZimletEmailNotify' name='EmailReminderZimletEmailNotify' value='EmailReminderZimletEmailNotify'></td></tr>";
+   html[i++] = "<tr><td>"+ZmMsg.sendInvites+"</td><td><input type='checkbox' id='EmailReminderZimletsendInvites' name='EmailReminderZimletsendInvites' value='EmailReminderZimletsendInvites'></td></tr>";
+   html[i++] = "</table>";   
 	html[i++] = "</DIV>";
+  
 	return html.join("");
 };
 
