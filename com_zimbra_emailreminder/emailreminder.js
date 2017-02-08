@@ -83,6 +83,7 @@ function() {
       asyncMode: true,
       callback: new AjxCallback(void 0, this._setReminderEmail)
    });
+   this._messageBody = "";
 };
 
 EmailReminderZimlet.prototype._setReminderEmail = function(response) {
@@ -167,7 +168,7 @@ function() {
  * 
  */
 EmailReminderZimlet.prototype._createReminderDialog =
-function(msg) {
+function() {
 	//if zimlet dialog already exists...
 	if (this._erDialog) {
 		this._getAbsHoursMenu();//reset the timemenu
@@ -191,7 +192,7 @@ function(msg) {
 		};
 	this._erDialog = new ZmDialog(dialog_args);
    this._erDialog._button[1].setText(this.getMessage("EmailReminder_dialog_CancelBtn"));
-	this._erDialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._okBtnListener, [msg]));
+	this._erDialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._okBtnListener));
    
 };
 
@@ -201,7 +202,7 @@ function(msg) {
  * @see		_createReminderDialog
  */
 EmailReminderZimlet.prototype._okBtnListener =
-function(msg) {
+function() {
    var repeat = document.getElementById('EmailReminderZimletRepeat').value;
    var emailNotify = document.getElementById('EmailReminderZimletEmailNotify').checked;
    
@@ -218,11 +219,11 @@ function(msg) {
 	//add notes
 	var subject = "";
 	if (this._notes != "")
-		subject = this._subject + " (" + this._notesPrefix + this._notes + ")";
+		subject = this._subject + " (" + this._notes + ")";
 	else
 		subject = this._subject;
 
-	this._createAppt(startDate, endDate, subject, repeat, emailNotify, msg);
+	this._createAppt(startDate, endDate, subject, repeat, emailNotify);
 	this._erDialog.popdown();
 };
 
@@ -234,14 +235,15 @@ function(msg) {
  * @param	{string}	subject			the subject
  */
 EmailReminderZimlet.prototype._createAppt =
-function(startDate, endDate, subject, repeat, emailNotify, msg) {
+function(startDate, endDate, subject, repeat, emailNotify) {
 	var reminderMinutes = appCtxt.getSettings().getSetting("CAL_REMINDER_WARNING_TIME").value;
 	try {
 		var appt = new ZmAppt();
 		appt.setStartDate(startDate);
 		appt.setEndDate(endDate);
 		appt.setName(subject);
-		appt.setTextNotes(this._notesPrefix + this._notes);
+		appt.setTextNotes(this._notes +"\r\n\r\n" + this._messageBody);
+      this._messageBody = "";
 		appt.setReminderMinutes(reminderMinutes);
 		appt.freeBusy = "F";
 		appt.privacy = "PRI";
@@ -310,7 +312,7 @@ function(force) {
  * @param	{string}	subject
  */
 EmailReminderZimlet.prototype._setSubjectAndShowDlg =
-function(subject, msg) {
+function(subject) {
 	if (this._apptComposeController == undefined) {//load calendar package when we are creating appt for the first time(since login)
 		this._getEmailFollowupFolderId();
 		this._apptComposeController = AjxDispatcher.run("GetApptComposeController");
@@ -324,7 +326,7 @@ function(subject, msg) {
 	if (subject.length > 50)
 		subject = subject.substring(0, 50) + "...";
 
-	this._createReminderDialog(msg);
+	this._createReminderDialog();
 	document.getElementById("emailReminder_subjectField").innerHTML = subject;
 	this._erDialog.popup();
 };
@@ -379,7 +381,8 @@ function() {
 	var msg = this._composerCtrl._composeView.getMsg();
 	if (msg) {
 		this._composerCtrl._send();
-		this._setSubjectAndShowDlg(this._composerCtrl._composeView._subjectField.value, msg);
+      this._messageBody = msg.textBodyContent
+		this._setSubjectAndShowDlg(this._composerCtrl._composeView._subjectField.value);
 	}
 };
 
