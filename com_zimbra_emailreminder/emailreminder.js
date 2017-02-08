@@ -84,6 +84,8 @@ function() {
       callback: new AjxCallback(void 0, this._setReminderEmail)
    });
    this._messageBody = "";
+   
+   this._getEmailFollowupFolderId();
 };
 
 EmailReminderZimlet.prototype._setReminderEmail = function(response) {
@@ -610,7 +612,9 @@ EmailReminderZimlet.prototype.singleClicked = function() {
 EmailReminderZimlet.prototype._showPreferenceDlg =
 function() {
    var soapDoc = AjxSoapDoc.create("GetPrefsRequest", "urn:zimbraAccount");
-
+   // create the calendar, if not exists, and set the notification email
+   // a void extra reloads, and user actions
+   this._getEmailFollowupFolderId();
    appCtxt.getAppController().sendRequest({
       soapDoc: soapDoc,
       asyncMode: true,
