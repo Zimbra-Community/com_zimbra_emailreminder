@@ -76,13 +76,13 @@ function() {
 	this.ereminder_showInCompose = this.getUserProperty(EmailReminderZimlet.USER_PROP_SHOW_IN_COMPOSE) == "true";
 	this._notesPrefix = this.getMessage("EmailReminder_dialog_reminder_notes_label");
 
-      var soapDoc = AjxSoapDoc.create("GetPrefsRequest", "urn:zimbraAccount");
+   var soapDoc = AjxSoapDoc.create("GetPrefsRequest", "urn:zimbraAccount");
 
-      appCtxt.getAppController().sendRequest({
-         soapDoc: soapDoc,
-         asyncMode: true,
-         callback: new AjxCallback(void 0, this._setReminderEmail)
-      });
+   appCtxt.getAppController().sendRequest({
+      soapDoc: soapDoc,
+      asyncMode: true,
+      callback: new AjxCallback(void 0, this._setReminderEmail)
+   });
 };
 
 EmailReminderZimlet.prototype._setReminderEmail = function(response) {
@@ -204,7 +204,6 @@ EmailReminderZimlet.prototype._okBtnListener =
 function(msg) {
    var repeat = document.getElementById('EmailReminderZimletRepeat').value;
    var emailNotify = document.getElementById('EmailReminderZimletEmailNotify').checked;
-   var sendInvites = document.getElementById('EmailReminderZimletsendInvites').checked;
    
 	var startDate = new Date();
 	var endDate = "";
@@ -223,7 +222,7 @@ function(msg) {
 	else
 		subject = this._subject;
 
-	this._createAppt(startDate, endDate, subject, repeat, emailNotify, sendInvites, msg);
+	this._createAppt(startDate, endDate, subject, repeat, emailNotify, msg);
 	this._erDialog.popdown();
 };
 
@@ -235,7 +234,7 @@ function(msg) {
  * @param	{string}	subject			the subject
  */
 EmailReminderZimlet.prototype._createAppt =
-function(startDate, endDate, subject, repeat, emailNotify, sendInvites, msg) {
+function(startDate, endDate, subject, repeat, emailNotify, msg) {
 	var reminderMinutes = appCtxt.getSettings().getSetting("CAL_REMINDER_WARNING_TIME").value;
 	try {
 		var appt = new ZmAppt();
@@ -248,31 +247,13 @@ function(startDate, endDate, subject, repeat, emailNotify, sendInvites, msg) {
 		appt.privacy = "PRI";
 		appt.transparency = "O";
       appt.setRecurType(repeat);
-
-      msg._addrs.TO._array.forEach(function(address)
-      {
-         appt.setAttendees(address.address, ZmCalBaseItem.PERSON);
-      });
-
-      msg._addrs.CC._array.forEach(function(address)
-      {
-         appt.setAttendees(address.address, ZmCalBaseItem.PERSON);
-      });
       
       if(emailNotify)
       {
          appt.addReminderAction("EMAIL");
       }   
 		appt.setFolderId(this.emailFollowupFolderId);
-      
-      if(sendInvites)
-      {
-		   appt.send();
-      }
-      else
-      {
-         appt.save();
-      }   
+      appt.save();
 	} catch(e) {
 		return;
 	}
@@ -426,7 +407,6 @@ function() {
 	html[i++] = "</td><td><input id='emailReminder_notesField' type=text style=\"width:400px;\"></input></td></tr>";
    html[i++] = "<tr><td>"+ZmMsg.repeatLabel+" " + "</td><td><select id='EmailReminderZimletRepeat'><option value='NON'>"+ZmMsg.none+"</option><option value='DAI'>"+ZmMsg.daily+"</option><option value='WEE'>"+ZmMsg.weekly+"</option><option value='MON'>"+ZmMsg.monthly+"</option><option value='YEA'>"+ZmMsg.yearly+"</option></select></td></tr>"; // values are in ZmApptViewHelper.REPEAT_OPTIONS
    html[i++] = "<tr><td>"+ZmMsg.emailNotificationsLabel+"</td><td><input type='checkbox' id='EmailReminderZimletEmailNotify' name='EmailReminderZimletEmailNotify' value='EmailReminderZimletEmailNotify'></td></tr>";
-   html[i++] = "<tr><td>"+ZmMsg.sendInvites+"</td><td><input type='checkbox' id='EmailReminderZimletsendInvites' name='EmailReminderZimletsendInvites' value='EmailReminderZimletsendInvites'></td></tr>";
    html[i++] = "</table>";   
 	html[i++] = "</DIV>";
   
@@ -626,6 +606,14 @@ EmailReminderZimlet.prototype.singleClicked = function() {
  */
 EmailReminderZimlet.prototype._showPreferenceDlg =
 function() {
+   var soapDoc = AjxSoapDoc.create("GetPrefsRequest", "urn:zimbraAccount");
+
+   appCtxt.getAppController().sendRequest({
+      soapDoc: soapDoc,
+      asyncMode: true,
+      callback: new AjxCallback(void 0, this._setReminderEmail)
+   });
+         
 	this._allowFlag = this.getUserProperty(EmailReminderZimlet.USER_PROP_ALLOW_FLAG) == "true";
 	this._allowDrag = this.getUserProperty(EmailReminderZimlet.USER_PROP_ALLOW_DRAG) == "true";
 	this.turnONEmailReminderChkbx = this.getUserProperty("turnONEmailReminderChkbx") == "true";
