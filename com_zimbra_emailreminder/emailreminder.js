@@ -265,18 +265,66 @@ function(startDate, endDate, subject, repeat, emailNotify) {
 	appCtxt.getAppController().setStatusMsg(this.getMessage("EmailReminder_status_created"), ZmStatusView.LEVEL_INFO, null, transitions);
 };
 
+
+// Work around an 8.7 regression, allow drop of various types of objects to Zimlets
+// Fix: /symbols/src/WebRoot_js_zimbraMail_share_model_ZmZimletContext.js.html
+// See comment: XXX Assumes all dragged objects are of the same type
+// Bugzilla: https://bugzilla.zimbra.com/show_bug.cgi?id=106104
+ZmZimletContext._translateZMObject =
+function(obj) {
+   if(!(obj instanceof Array))
+   {
+      //This code is what Zimbra does by default, we do this to try and avoid regressions
+      var type = obj[0] ? obj[0].toString() : obj.toString();
+    	return (ZmZimletContext._zmObjectTransformers[type])
+ 		? ZmZimletContext._zmObjectTransformers[type](obj) : obj;
+   }
+   else
+   {
+      //In case it is an array, we apply our patch
+      var transformedObjects = [];
+      for(x = 0; x < obj.length; x++)
+      {
+         var type = obj[x].toString();
+         transformedObjects[x] = (ZmZimletContext._zmObjectTransformers[type]) ? ZmZimletContext._zmObjectTransformers[type](obj[x]) : obj[x];
+      }
+      return transformedObjects;
+   }  
+};
+
+
 /**
  * Handles the drop event.
  * 
  * @param	
  */
 EmailReminderZimlet.prototype.doDrop =
-function(msg) {
-	if (this._allowDrag && this.emailReminderZimletON) {
+function(msg) {   
+   if(!(msg instanceof Array))
+   {
+      msg = [msg];
+   }
+   msg = msg[0].srcObj;
+
+   if(msg.type === "CONV")
+   {
+      msg = msg.getFirstHotMsg();
+   }
+   
+   //make sure the message is loaded
+   var msgParams = {
+      callback:new AjxCallback(this, this._loadMessageAfterDrop, [msg])
+   };
+   msg.load(msgParams);
+};
+
+EmailReminderZimlet.prototype._loadMessageAfterDrop = function(msg) {
+   if (this._allowDrag && this.emailReminderZimletON) {
+      this._messageBody = AjxStringUtil.stripTags(msg.getBodyContent());
 		this._msgObj = msg;
 		this._setSubjectAndShowDlg(msg.subject);
 	}
-};
+}
 
 /**
  * Handles the mail flag event.
