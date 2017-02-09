@@ -285,16 +285,39 @@ function(msg) {
  */
 EmailReminderZimlet.prototype.onMailFlagClick =
 function(msgs, on) {
-	if (this._allowFlag && this.emailReminderZimletON) {
-		this._msgObj = msgs[0];
-		if(on == null || on == undefined) {
-			//when on is null, delay this so we can figure out if the item was flagged or unflagged
-			setTimeout(AjxCallback.simpleClosure(this._showDlg, this), 1000);
-		} else if(on == true){
-			this._showDlg(true);
-		}
-	}
+	if (this._allowFlag && this.emailReminderZimletON) 
+   {
+      if(msgs[0].type === "CONV")
+      {
+         var msg = msgs[0].getFirstHotMsg();
+      }
+      else
+      {
+         var msg = msgs[0];
+      }
+      
+      //make sure the message is loaded
+      var msgParams = {
+         callback:new AjxCallback(this, this._loadMessageAfterFlag, [msg, on])
+      };
+      msg.load(msgParams);
+   }
 };
+
+
+EmailReminderZimlet.prototype._loadMessageAfterFlag = function(msg, on) {
+   this._messageBody = AjxStringUtil.stripTags(msg.getBodyContent());
+   this._msgObj = msg;
+	if(on == null || on == undefined) 
+   {
+      //when on is null, delay this so we can figure out if the item was flagged or unflagged
+		setTimeout(AjxCallback.simpleClosure(this._showDlg, this), 1000);
+   } else if(on == true)
+   {
+	   this._showDlg(true);
+   }
+}
+
 
 /**
  * Shows the dialog.
