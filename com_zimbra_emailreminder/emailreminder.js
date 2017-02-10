@@ -193,7 +193,7 @@ function() {
 			parent	: this.getShell()
 		};
 	this._erDialog = new ZmDialog(dialog_args);
-   this._erDialog._button[1].setText(this.getMessage("EmailReminder_dialog_CancelBtn"));
+   this._erDialog._button[1].setText(ZmMsg.cancel + " " + ZmMsg.reminder);
 	this._erDialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._okBtnListener));
    
 };
@@ -395,7 +395,16 @@ function(subject) {
 		this._showReloadBrowserDlg();
 		return;
 	}
-	this._subject = subject;
+   	
+   if(!subject)
+   {
+      this._subject = '';
+      var subject = '';
+   }
+   else
+   {
+      this._subject = subject;
+   }
 	if (subject.length > 50)
 		subject = subject.substring(0, 50) + "...";
 
@@ -437,9 +446,25 @@ function(toolbar, controller) {
 			index   : 1,
 			image   : "emailreminder-panelIcon"
 		}
-		);
-		toolbar.addOp(ID, 2);
-	    btn.addSelectionListener(new AjxListener(this, this._createReminderFromCompose));
+		);		
+      
+      var EmailReminderZimletMenu = new DwtMenu({
+                      parent: btn,
+                      id: ID + '_menu'
+                  });  
+      
+      if (appCtxt.get(ZmSetting.MAIL_SEND_LATER_ENABLED))
+      {
+         btn.setMenu(EmailReminderZimletMenu); 
+      }
+      
+      var laterBtn = new DwtMenuItem({parent: EmailReminderZimletMenu});
+      laterBtn.setText(ZmMsg.sendLater.replace('...','') + ' & ' + this.getMessage("EmailReminder_dialog_reminder_title"));
+      laterBtn.setData('later', true);
+      laterBtn.addSelectionListener(new AjxListener(this, this._createReminderFromCompose));
+      
+      toolbar.addOp(ID, 2);                
+	   btn.addSelectionListener(new AjxListener(this, this._createReminderFromCompose));
 		this._composerCtrl = controller;
 	}
 };
@@ -450,10 +475,18 @@ function(toolbar, controller) {
  * @see		_addReminderBtnToCompose
  */
 EmailReminderZimlet.prototype._createReminderFromCompose =
-function() {
+function(args) {
 	var msg = this._composerCtrl._composeView.getMsg();
 	if (msg) {
-		this._composerCtrl._send();
+      //send later
+      if(args.dwtObj._data.later)
+      {
+         this._composerCtrl.showDelayDialog();
+      }
+      else
+      {   
+         this._composerCtrl._send();
+      }   
       this._messageBody = msg.textBodyContent
 		this._setSubjectAndShowDlg(this._composerCtrl._composeView._subjectField.value);
 	}
@@ -484,7 +517,7 @@ function() {
 	html[i++] = "</td><td><input id='emailReminder_notesField' type=text style=\"width:400px;\"></input></td></tr>";
    html[i++] = "<tr><td>"+ZmMsg.repeatLabel+" " + "</td><td><select id='EmailReminderZimletRepeat'><option value='NON'>"+ZmMsg.none+"</option><option value='DAI'>"+ZmMsg.daily+"</option><option value='WEE'>"+ZmMsg.weekly+"</option><option value='MON'>"+ZmMsg.monthly+"</option><option value='YEA'>"+ZmMsg.yearly+"</option></select></td></tr>"; // values are in ZmApptViewHelper.REPEAT_OPTIONS
    html[i++] = "<tr><td>"+ZmMsg.emailNotificationsLabel+"</td><td><input type='checkbox' id='EmailReminderZimletEmailNotify' name='EmailReminderZimletEmailNotify' value='EmailReminderZimletEmailNotify'></td></tr>";
-   html[i++] = "<tr><td colspan='2'>"+ZmMsg.numberOfMinutes+":</td></tr><tr><td></td><td><input type='number' id='EmailReminderZimletNumberOfMinutes' name='EmailReminderZimletNumberOfMinutes' value='"+reminderMinutes+"'></td></tr>";
+   html[i++] = "<tr><td>"+ZmMsg.custom + " " + ZmMsg.reminder + " " + ZmMsg.minutes + ":</td><td><input type='number' id='EmailReminderZimletNumberOfMinutes' name='EmailReminderZimletNumberOfMinutes' value='"+reminderMinutes+"'></td></tr>";
    html[i++] = "</table>";   
 	html[i++] = "</DIV>";
   
