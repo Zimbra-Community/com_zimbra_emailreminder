@@ -207,6 +207,7 @@ EmailReminderZimlet.prototype._okBtnListener =
 function() {
    var repeat = document.getElementById('EmailReminderZimletRepeat').value;
    var emailNotify = document.getElementById('EmailReminderZimletEmailNotify').checked;
+   var EmailReminderZimletNumberOfMinutes = document.getElementById('EmailReminderZimletNumberOfMinutes').value;
    
 	var startDate = new Date();
 	var endDate = "";
@@ -225,7 +226,7 @@ function() {
 	else
 		subject = this._subject;
 
-	this._createAppt(startDate, endDate, subject, repeat, emailNotify);
+	this._createAppt(startDate, endDate, subject, repeat, emailNotify, EmailReminderZimletNumberOfMinutes);
 	this._erDialog.popdown();
 };
 
@@ -237,8 +238,7 @@ function() {
  * @param	{string}	subject			the subject
  */
 EmailReminderZimlet.prototype._createAppt =
-function(startDate, endDate, subject, repeat, emailNotify) {
-	var reminderMinutes = appCtxt.getSettings().getSetting("CAL_REMINDER_WARNING_TIME").value;
+function(startDate, endDate, subject, repeat, emailNotify, EmailReminderZimletNumberOfMinutes) {
 	try {
 		var appt = new ZmAppt();
 		appt.setStartDate(startDate);
@@ -246,7 +246,7 @@ function(startDate, endDate, subject, repeat, emailNotify) {
 		appt.setName(subject);
 		appt.setTextNotes(this._notes +"\r\n\r\n" + this._messageBody);
       this._messageBody = "";
-		appt.setReminderMinutes(reminderMinutes);
+		appt.setReminderMinutes(EmailReminderZimletNumberOfMinutes);
 		appt.freeBusy = "F";
 		appt.privacy = "PRI";
 		appt.transparency = "O";
@@ -470,6 +470,7 @@ function() {
 	var hdrMsg = AjxMessageFormat.format(this.getMessage("EmailReminder_dialog_reminder_header"), hdrMsgChunk);
 	var html = new Array();
 	var i = 0;
+   var reminderMinutes = appCtxt.getSettings().getSetting("CAL_REMINDER_WARNING_TIME").value;
 	html[i++] = "<DIV>";
 	html[i++] = "<TABLE width=100%>";
 	html[i++] = ["<TR><TD width=2%><img src='" , this.getResource("emailreminder-icon.png") , "'/></TD><TD>",hdrMsg,"</TD><TR>"].join("");
@@ -483,6 +484,7 @@ function() {
 	html[i++] = "</td><td><input id='emailReminder_notesField' type=text style=\"width:400px;\"></input></td></tr>";
    html[i++] = "<tr><td>"+ZmMsg.repeatLabel+" " + "</td><td><select id='EmailReminderZimletRepeat'><option value='NON'>"+ZmMsg.none+"</option><option value='DAI'>"+ZmMsg.daily+"</option><option value='WEE'>"+ZmMsg.weekly+"</option><option value='MON'>"+ZmMsg.monthly+"</option><option value='YEA'>"+ZmMsg.yearly+"</option></select></td></tr>"; // values are in ZmApptViewHelper.REPEAT_OPTIONS
    html[i++] = "<tr><td>"+ZmMsg.emailNotificationsLabel+"</td><td><input type='checkbox' id='EmailReminderZimletEmailNotify' name='EmailReminderZimletEmailNotify' value='EmailReminderZimletEmailNotify'></td></tr>";
+   html[i++] = "<tr><td colspan='2'>"+ZmMsg.numberOfMinutes+":</td></tr><tr><td></td><td><input type='number' id='EmailReminderZimletNumberOfMinutes' name='EmailReminderZimletNumberOfMinutes' value='"+reminderMinutes+"'></td></tr>";
    html[i++] = "</table>";   
 	html[i++] = "</DIV>";
   
